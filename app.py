@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 
 # --- 页面全局配置 ---
 st.set_page_config(page_title="课堂音频信息熵分析", layout="wide")
-st.title("📈 课堂音频信息熵 (Spectral Entropy) 分析系统")
+st.title("教学质量检测系统")
 st.markdown("基于信息论的课堂声学特征提取，直接量化课堂信息输出的复杂度与动态起伏。")
 
 @st.cache_data
