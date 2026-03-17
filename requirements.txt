@@ -1,7 +1,6 @@
 streamlit
-whisper
+openai-whisper
 jieba
-math
 ollections
 plotly
 os
