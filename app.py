@@ -12,8 +12,8 @@ import numpy as np
 
 # --- 页面全局配置 ---
 st.set_page_config(page_title="课堂语义信息熵分析", layout="wide")
-st.title("🧠 课堂教学内容语义信息密度分析系统 (Whisper 本地大模型版)")
-st.markdown("通过本地部署的 OpenAI Whisper 模型提取教师授课文本，结合中文分词技术，计算文本的香农信息熵，彻底告别网络报错与限流。")
+st.title("教学质量检测")
+st.markdown("通过本地部署的 OpenAI Whisper 模型提取教师授课文本，结合中文分词技术，计算文本的香农信息熵")
 
 # --- 核心模型加载 (使用缓存，防止每次上传都重新加载模型) ---
 @st.cache_resource
