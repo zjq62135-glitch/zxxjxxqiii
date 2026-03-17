@@ -17,6 +17,7 @@ st.markdown(
     /* 主内容区域背景 */
     .stApp {
         background-color: white;
+        color: black; /* 强制所有文字变成黑色！ */
     }
     /* 顶部页眉背景 */
     header[data-testid="stHeader"] {
