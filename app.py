@@ -129,7 +129,7 @@ if uploaded_file is not None:
     st.success("✅ 本地模型识别与语义信息熵计算完成！")
     
     # --- 模块一：核心指标数据看板 ---
-    st.markdown("###  课堂内容干货密度诊断")
+    st.markdown("### 📊 课堂内容干货密度诊断")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("平均语义信息熵", f"{mean_ent:.2f} bits", "平均词汇丰富度")
     col2.metric("最高语义信息熵", f"{max_ent:.2f} bits", "知识最密集瞬间")
