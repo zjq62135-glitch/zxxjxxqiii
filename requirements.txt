@@ -1,4 +1,10 @@
+os
 streamlit
-librosa
-numpy
+whisper
+jieba
+math
+ollections
 plotly
+os
+numpy
+
