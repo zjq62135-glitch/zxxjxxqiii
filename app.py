@@ -10,6 +10,29 @@ import plotly.graph_objects as go
 import os
 import numpy as np
 
+# --- 强制修改背景颜色为白色 ---
+st.markdown(
+    """
+    <style>
+    /* 主内容区域背景 */
+    .stApp {
+        background-color: white;
+    }
+    /* 顶部页眉背景 */
+    header[data-testid="stHeader"] {
+        background-color: white;
+    }
+    /* 针对一些组件背景的微调 (可选) */
+    .stMetric {
+        background-color: #f8f9fa; /* 给数据指标卡片加一点淡淡的灰，方便识别 */
+        padding: 10px;
+        border-radius: 10px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- 页面全局配置 ---
 st.set_page_config(page_title="课堂语义信息熵分析", layout="wide")
 st.title("教学质量检测")
@@ -106,7 +129,7 @@ if uploaded_file is not None:
     st.success("✅ 本地模型识别与语义信息熵计算完成！")
     
     # --- 模块一：核心指标数据看板 ---
-    st.markdown("### 📊 课堂内容干货密度诊断")
+    st.markdown("###  课堂内容干货密度诊断")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("平均语义信息熵", f"{mean_ent:.2f} bits", "平均词汇丰富度")
     col2.metric("最高语义信息熵", f"{max_ent:.2f} bits", "知识最密集瞬间")
