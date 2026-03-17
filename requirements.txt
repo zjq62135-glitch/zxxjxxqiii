@@ -1,8 +1,6 @@
 streamlit
 openai-whisper
 jieba
-ollections
 plotly
-os
-numpy
-
+numpy==1.26.4
+soundfile
