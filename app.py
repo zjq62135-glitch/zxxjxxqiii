@@ -10,29 +10,7 @@ import plotly.graph_objects as go
 import os
 import numpy as np
 
-# --- 强制修改背景颜色为白色 ---
-st.markdown(
-    """
-    <style>
-    /* 主内容区域背景 */
-    .stApp {
-        background-color: white;
-        color: black; /* 强制所有文字变成黑色！ */
-    }
-    /* 顶部页眉背景 */
-    header[data-testid="stHeader"] {
-        background-color: white;
-    }
-    /* 针对一些组件背景的微调 (可选) */
-    .stMetric {
-        background-color: #f8f9fa; /* 给数据指标卡片加一点淡淡的灰，方便识别 */
-        padding: 10px;
-        border-radius: 10px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+
 
 # --- 页面全局配置 ---
 st.set_page_config(page_title="课堂语义信息熵分析", layout="wide")
