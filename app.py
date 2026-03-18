@@ -2,7 +2,7 @@ import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import streamlit as st
-import whisper
+from faster_whisper import WhisperModel
 import jieba
 import math
 from collections import Counter
@@ -45,35 +45,41 @@ st.markdown(
 # --- 头部信息区域 (重新排版，更加清爽) ---
 st.markdown("<div class='title-section'>", unsafe_allow_html=True)
 st.title(" 教学质量检测")
-st.markdown("##### 基于本地大模型 Whisper 的课堂内容信息熵计算")
+st.markdown("##### 基于本地极速大模型 Faster-Whisper 的课堂内容信息熵计算")
 st.caption("通过 NLP 自然语言处理与香农信息论，动态量化授课内容，为教学复盘提供客观数据支撑。")
 st.markdown("</div>", unsafe_allow_html=True)
 st.divider() # 添加一条优雅的浅色分割线
 
-# --- 核心模型加载 ---
+# --- 核心模型加载 (替换为 Faster-Whisper，启用 CPU int8 量化加速) ---
 @st.cache_resource
 def load_whisper_model():
-    return whisper.load_model("base")
+    return WhisperModel("base", device="cpu", compute_type="int8")
 
 @st.cache_data
 def process_audio_to_text_entropy(file_path):
     model = load_whisper_model()
-    result = model.transcribe(file_path, language="zh")
-    segments = result["segments"]
+    # faster-whisper 返回的是生成器
+    segments, info = model.transcribe(file_path, language="zh", beam_size=5)
     
     times, text_entropies, transcripts = [], [], []
     
+    # 遍历 segment 对象
     for seg in segments:
-        text = seg["text"].strip()
-        mid_time = (seg["start"] + seg["end"]) / 2.0 
+        text = seg.text.strip()
+        mid_time = (seg.start + seg.end) / 2.0 
         
         if text == "":
             entropy = 0.0
         else:
             words = list(jieba.cut(text, cut_all=False))
-            # 扩展停用词，让“干货”计算更精准
-            with open('hit_stopwords.txt', 'r', encoding='utf-8') as f:
-                stop_words = f.read().splitlines()
+            # 完整保留你自定义的哈工大停用词库逻辑
+            try:
+                with open('hit_stopwords.txt', 'r', encoding='utf-8') as f:
+                    stop_words = f.read().splitlines()
+            except FileNotFoundError:
+                # 容错处理：如果在云端找不到停用词文件，则使用基础版，防止程序直接崩溃
+                stop_words = ["，", "。", "！", "？", "、", "：", " ", "的", "了", "是"]
+                
             words = [w for w in words if w.strip() and w not in stop_words]
             
             if not words:
@@ -114,7 +120,7 @@ if uploaded_file is not None:
         
     # 使用更优雅的提示框
     with st.status("🧠 正在启动 AI 语义解析...", expanded=True) as status:
-        st.write("1. 正在加载 Whisper 本地推理模型...")
+        st.write("1. 正在加载 Faster-Whisper 量化推理引擎...")
         st.write("2. 正在切割音频并提取精准时间戳文本...")
         st.write("3. 正在进行中文 NLP 分词与香农熵测算...")
         
@@ -126,12 +132,12 @@ if uploaded_file is not None:
     st.write("") # 增加空行留白
     
     # --- 模块一：核心指标数据看板 ---
-    st.markdown("#### 信息熵核心四大指标指标")
+    st.markdown("#### 信息熵核心四大指标")
     st.info("""提示：
-            \n 1.平均信息熵越高，代表授课内容丰富;
-            \n 2.最高信息熵反应整节课最高潮的部分；
-            \n 3.信息峰值比越高，老师讲课节奏越快；
-            \n 4.信息低谷比例过高，通常意味着课堂存在较多停顿或无意义语气词。""")
+            \n 1. 平均信息熵越高，代表授课内容丰富；
+            \n 2. 最大信息熵反应整节课最高潮的部分；
+            \n 3. 波峰因数越高，老师讲课节奏越快；
+            \n 4. 信息低谷比例过高，通常意味着课堂存在较多停顿或无意义语气词。""")
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -182,4 +188,7 @@ if uploaded_file is not None:
     st.plotly_chart(fig, use_container_width=True)
     
     if os.path.exists(temp_audio_path):
-        os.remove(temp_audio_path)
+        try:
+            os.remove(temp_audio_path)
+        except Exception:
+            pass
