@@ -1,5 +1,5 @@
 streamlit
-openai-whisper
+faster-whisper
 jieba
 plotly
 numpy==1.26.4
