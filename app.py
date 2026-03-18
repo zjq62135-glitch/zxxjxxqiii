@@ -108,7 +108,7 @@ def process_audio_to_text_entropy(file_path):
     return times, text_entropies, max_ent, mean_ent, crest_factor, valley_ratio, threshold_peak, threshold_valley, transcripts
 
 # --- 文件上传区域 ---
-uploaded_file = st.file_uploader("📂 选择录音文件上传", type=['wav', 'mp3', 'm4a', 'aac', 'flac'])
+uploaded_file = st.file_uploader("📂 选择录音文件上传", type=['wav', 'mp3', 'm4a', 'aac', 'flac','mp4'])
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1].lower()
