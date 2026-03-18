@@ -58,12 +58,11 @@ def load_whisper_model():
 @st.cache_data
 def process_audio_to_text_entropy(file_path):
     model = load_whisper_model()
-    # faster-whisper 返回的是生成器
+    # faster-whisper 返回的是生成器，beam_size 设为 5 平衡速度与准确率
     segments, info = model.transcribe(file_path, language="zh", beam_size=5)
     
     times, text_entropies, transcripts = [], [], []
     
-    # 遍历 segment 对象
     for seg in segments:
         text = seg.text.strip()
         mid_time = (seg.start + seg.end) / 2.0 
@@ -72,13 +71,13 @@ def process_audio_to_text_entropy(file_path):
             entropy = 0.0
         else:
             words = list(jieba.cut(text, cut_all=False))
-            # 完整保留你自定义的哈工大停用词库逻辑
+            # 扩展停用词，让“干货”计算更精准 (加入安全读取机制)
             try:
                 with open('hit_stopwords.txt', 'r', encoding='utf-8') as f:
                     stop_words = f.read().splitlines()
             except FileNotFoundError:
-                # 容错处理：如果在云端找不到停用词文件，则使用基础版，防止程序直接崩溃
-                stop_words = ["，", "。", "！", "？", "、", "：", " ", "的", "了", "是"]
+                # 如果云端找不到该文件，使用基础停用词兜底
+                stop_words = ["，", "。", "！", "？", "、", "：", " ", "的", "了", "是", "啊", "呃", "这个", "那个"]
                 
             words = [w for w in words if w.strip() and w not in stop_words]
             
@@ -109,7 +108,7 @@ def process_audio_to_text_entropy(file_path):
     return times, text_entropies, max_ent, mean_ent, crest_factor, valley_ratio, threshold_peak, threshold_valley, transcripts
 
 # --- 文件上传区域 ---
-uploaded_file = st.file_uploader("📂 选择录音文件上传 ", type=['wav', 'mp3', 'm4a', 'aac', 'flac'])
+uploaded_file = st.file_uploader("📂 选择录音文件上传", type=['wav', 'mp3', 'm4a', 'aac', 'flac'])
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1].lower()
@@ -132,10 +131,10 @@ if uploaded_file is not None:
     st.write("") # 增加空行留白
     
     # --- 模块一：核心指标数据看板 ---
-    st.markdown("#### 信息熵核心四大指标")
+    st.markdown("#### 信息熵核心四大指标") # 修正了之前的重复字
     st.info("""提示：
             \n 1. 平均信息熵越高，代表授课内容丰富；
-            \n 2. 最大信息熵反应整节课最高潮的部分；
+            \n 2. 最高信息熵反应整节课最高潮的部分；
             \n 3. 波峰因数越高，老师讲课节奏越快；
             \n 4. 信息低谷比例过高，通常意味着课堂存在较多停顿或无意义语气词。""")
     
@@ -187,6 +186,7 @@ if uploaded_file is not None:
     
     st.plotly_chart(fig, use_container_width=True)
     
+    # 增加对文件删除的容错，避免 Windows 本地占用报错
     if os.path.exists(temp_audio_path):
         try:
             os.remove(temp_audio_path)
