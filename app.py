@@ -72,7 +72,8 @@ def process_audio_to_text_entropy(file_path):
         else:
             words = list(jieba.cut(text, cut_all=False))
             # 扩展停用词，让“干货”计算更精准
-            stop_words = ["，", "。", "！", "？", "、", "：", " ", "的", "了", "是", "啊", "呃", "这个", "那个", "那么", "然后", "大家", "好的"]
+            with open('hit_stopwords.txt', 'r', encoding='utf-8') as f:
+                stop_words = f.read().splitlines()
             words = [w for w in words if w.strip() and w not in stop_words]
             
             if not words:
