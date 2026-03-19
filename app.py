@@ -3,7 +3,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import streamlit as st
 from faster_whisper import WhisperModel
-import jieba
+import hanlp  # 引入深度学习 NLP 引擎
 import math
 from collections import Counter
 import plotly.graph_objects as go
@@ -14,26 +14,21 @@ st.set_page_config(
     page_title="教学质量检测", 
     page_icon="🎓", 
     layout="wide",
-    initial_sidebar_state="collapsed" # 默认收起侧边栏，让主界面更宽阔
+    initial_sidebar_state="collapsed"
 )
 
-# --- 极简现代风 CSS 微调 ---
-# 不再强制改变全局背景色，只针对局部组件进行卡片化和边距优化
 st.markdown(
     """
     <style>
-    /* 弱化顶部默认的粗线边距 */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
     }
-    /* 美化指标卡片，增加微小的投影和圆角，实现悬浮卡片感 */
     [data-testid="stMetricValue"] {
         font-size: 2.2rem;
         font-weight: 600;
-        color: #636efa; /* 使用 Plotly 默认的现代蓝紫色 */
+        color: #636efa;
     }
-    /* 标题区域底部增加一点留白 */
     .title-section {
         margin-bottom: 2rem;
     }
@@ -42,23 +37,30 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 头部信息区域 (重新排版，更加清爽) ---
 st.markdown("<div class='title-section'>", unsafe_allow_html=True)
-st.title(" 教学质量检测")
-st.markdown("##### 基于本地极速大模型 Faster-Whisper 的课堂内容信息熵计算")
-st.caption("通过 NLP 自然语言处理与香农信息论，动态量化授课内容，为教学复盘提供客观数据支撑。")
+st.title("🎓 教学质量检测")
+st.markdown("##### 基于 Faster-Whisper 与 HanLP 深度学习双引擎的课堂内容量化")
+st.caption("采用前沿 NLP 神经网络架构与香农信息论，动态提取授课语义特征，为教学复盘提供精准数据支撑。")
 st.markdown("</div>", unsafe_allow_html=True)
-st.divider() # 添加一条优雅的浅色分割线
+st.divider()
 
-# --- 核心模型加载 (替换为 Faster-Whisper，启用 CPU int8 量化加速) ---
+# --- 核心模型加载区 ---
 @st.cache_resource
 def load_whisper_model():
+    # 语音大模型：极速版
     return WhisperModel("base", device="cpu", compute_type="int8")
+
+@st.cache_resource
+def load_hanlp_tokenizer():
+    # 加载 HanLP 轻量级预训练分词模型 (ELECTRA 架构)
+    # 第一次运行会自动下载模型权重，请耐心等待
+    return hanlp.load(hanlp.pretrained.tok.COARSE_ELECTRA_SMALL_ZH)
 
 @st.cache_data
 def process_audio_to_text_entropy(file_path):
     model = load_whisper_model()
-    # faster-whisper 返回的是生成器，beam_size 设为 5 平衡速度与准确率
+    tokenizer = load_hanlp_tokenizer() # 调用 HanLP
+    
     segments, info = model.transcribe(file_path, language="zh", beam_size=5)
     
     times, text_entropies, transcripts = [], [], []
@@ -70,13 +72,14 @@ def process_audio_to_text_entropy(file_path):
         if text == "":
             entropy = 0.0
         else:
-            words = list(jieba.cut(text, cut_all=False))
-            # 扩展停用词，让“干货”计算更精准 (加入安全读取机制)
+            # 使用 HanLP 神经网络进行高精度分词
+            words = tokenizer(text)
+            
+            # 读取停用词库的容错机制
             try:
                 with open('hit_stopwords.txt', 'r', encoding='utf-8') as f:
                     stop_words = f.read().splitlines()
             except FileNotFoundError:
-                # 如果云端找不到该文件，使用基础停用词兜底
                 stop_words = ["，", "。", "！", "？", "、", "：", " ", "的", "了", "是", "啊", "呃", "这个", "那个"]
                 
             words = [w for w in words if w.strip() and w not in stop_words]
@@ -107,8 +110,11 @@ def process_audio_to_text_entropy(file_path):
     
     return times, text_entropies, max_ent, mean_ent, crest_factor, valley_ratio, threshold_peak, threshold_valley, transcripts
 
-# --- 文件上传区域 ---
-uploaded_file = st.file_uploader("📂 选择录音文件上传", type=['wav', 'mp3', 'm4a', 'aac', 'flac','mp4'])
+# --- 文件上传区域 (支持 MP4 视频直传) ---
+uploaded_file = st.file_uploader(
+    "📂 选择课堂音视频文件上传 (支持 .mp4, .wav, .mp3, .m4a 等格式)", 
+    type=['wav', 'mp3', 'm4a', 'aac', 'flac', 'mp4']
+)
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1].lower()
@@ -117,24 +123,31 @@ if uploaded_file is not None:
     with open(temp_audio_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
         
-    # 使用更优雅的提示框
-    with st.status("🧠 正在启动 AI 语义解析...", expanded=True) as status:
-        st.write("1. 正在加载 Faster-Whisper 量化推理引擎...")
-        st.write("2. 正在切割音频并提取精准时间戳文本...")
-        st.write("3. 正在进行中文 NLP 分词与香农熵测算...")
+    # 提供媒体预览
+    if file_extension == 'mp4':
+        with st.expander("📺 点击预览上传的课堂视频", expanded=False):
+            st.video(temp_audio_path)
+    else:
+        with st.expander("🔊 点击试听上传的课堂音频", expanded=False):
+            st.audio(temp_audio_path)
+            
+    with st.status("🧠 正在启动 AI 双引擎解析...", expanded=True) as status:
+        st.write("1. 正在唤醒 Faster-Whisper 语音大模型...")
+        st.write("2. 正在提取精准时间戳文本...")
+        st.write("3. 正在调用 HanLP 神经网络进行深层语义分词与测算...")
         
         (times, text_entropies, max_ent, mean_ent, 
          crest_factor, valley_ratio, t_peak, t_valley, transcripts) = process_audio_to_text_entropy(temp_audio_path)
          
         status.update(label="✅ 分析报告生成完毕！", state="complete", expanded=False)
     
-    st.write("") # 增加空行留白
+    st.write("") 
     
-    # --- 模块一：核心指标数据看板 ---
-    st.markdown("#### 信息熵核心四大指标") # 修正了之前的重复字
+    # --- 数据看板 ---
+    st.markdown("#### 📊 课堂内容深度核心指标")
     st.info("""提示：
-            \n 1. 平均信息熵越高，代表授课内容丰富；
-            \n 2. 最高信息熵反应整节课最高潮的部分；
+            \n 1. 平均信息熵越高，代表授课词汇越丰富、专业度越强；
+            \n 2. 最大信息熵反应整节课最高潮的部分；
             \n 3. 波峰因数越高，老师讲课节奏越快；
             \n 4. 信息低谷比例过高，通常意味着课堂存在较多停顿或无意义语气词。""")
     
@@ -151,9 +164,9 @@ if uploaded_file is not None:
     st.write("")
     st.divider()
     
-    # --- 模块二：语义信息熵动态波形图 ---
+    # --- 动态波形图 ---
     st.markdown("#### 📈 授课内容语义时序全景图")
-    st.caption("鼠标悬停在紫色曲线上，可直接查看该时间点老师的具体授课内容。")
+    st.caption("鼠标悬停在紫色曲线上，可直接查看该时间点老师的具体授课原话。")
     
     fig = go.Figure()
     
@@ -161,8 +174,8 @@ if uploaded_file is not None:
         x=times, y=text_entropies,
         mode='lines+markers',
         name='干货密度',
-        line=dict(color='#636efa', width=2.5, shape='spline'), # 使用 spline 曲线让线条更圆润平滑
-        marker=dict(size=7, color='white', line=dict(width=2, color='#636efa')), # 空心圆点设计
+        line=dict(color='#636efa', width=2.5, shape='spline'), 
+        marker=dict(size=7, color='white', line=dict(width=2, color='#636efa')), 
         text=transcripts,
         hovertemplate="<b>时间</b>: 第 %{x:.1f} 秒<br><b>干货密度</b>: %{y:.2f} bits<br><br><b>🗣️ 授课原话</b>: <i>%{text}</i><extra></extra>"
     ))
@@ -177,16 +190,15 @@ if uploaded_file is not None:
         xaxis_title="课程进行时间 (秒)",
         yaxis_title="语义信息熵 (bits)",
         margin=dict(l=10, r=10, t=20, b=10),
-        plot_bgcolor='rgba(0,0,0,0)', # 完全透明图表背景，更具现代感
+        plot_bgcolor='rgba(0,0,0,0)', 
         paper_bgcolor='rgba(0,0,0,0)',
         xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
         yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
-        hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial") # 优化悬浮框样式
+        hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial") 
     )
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # 增加对文件删除的容错，避免 Windows 本地占用报错
     if os.path.exists(temp_audio_path):
         try:
             os.remove(temp_audio_path)
